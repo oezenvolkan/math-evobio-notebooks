@@ -4,13 +4,19 @@
 using Markdown
 using InteractiveUtils
 
-# ╔═╡ e7a6836e-558e-11ef-0bde-3994fad19914
+# ╔═╡ faec6f08-5271-11ef-0d1e-25a50a2fc243
 begin
 	using Random;
 	using PlutoUI;
 end
 
-# ╔═╡ 80cc6369-0566-4181-8ed8-805034e37875
+# ╔═╡ 1ac4791a-5759-458b-a39c-1fe34c3a9712
+    begin
+		using Random: shuffle
+    	using StatsBase: mean
+	end
+
+# ╔═╡ e5c9d12f-cd65-4dfc-8552-cead6a219b21
 begin
 	using CairoMakie
 	custom_theme = Theme(
@@ -21,83 +27,121 @@ begin
 	)
 end
 
-# ╔═╡ b5f63565-7c87-4746-ae95-e86ccad0b91d
+# ╔═╡ de681d08-ab29-463d-9a56-03b940191a8b
 set_theme!(custom_theme)
 
-# ╔═╡ 659b9987-8193-4ad3-9d25-99ee3160e341
-md"A small Julia code simulates a simple stochastic evolution model (namely GMS model). This model demonstrates an emergent behavior/transition in the fitness landscape of a population, marked by a critical fitness value ($f_c$) when the birth probability exceeds the death probablitiy. For species with fitness values greater than $f_c$, the uniform distribution becomes the limiting distribution for their abundance. Their concise abstract is a relief to read after being exposed to numerous bs papers in the paleoceanography domain."  
+# ╔═╡ c18390b5-a97b-4e65-a069-31bbcac715b8
+md"## Setting the problem"
 
-# ╔═╡ ea6ed152-888f-4a55-85ea-4bf82bfa6f7c
-md"**ref:** *Guiol, H., Machado, F.P., Schinazi, R.B., 2009. A stochastic model of evolution. https://doi.org/10.48550/ARXIV.0909.2108*"
+# ╔═╡ fcf48216-966d-435d-9891-93ba46da13bd
+md"We have mosquitos around a Biergarten, and some people drink beer in the Garten wile the others drink only water. At the end, mosquitos bite people and we check each people how many mosquitos they attract based on their drink."
 
-# ╔═╡ e7f7c5a6-310f-4e74-aa87-297192e7fb3e
-md"""
-!!! abstract "Abstract"
-	We propose a stochastic model for evolution. Births and deaths of species occur with constant probabilities. Each new species is associated with a fitness sampled from the uniform distribution on [0, 1]. Every time there is a death event then the type that is killed is the one with the smallest fitness. We show that there is a sharp phase transition when the birth probability is larger than the death probability. The set of species with fitness higher than a certain critical value approach an uniform distribution. On the other hand all the species with fitness less than the critical disappear after a finite (random) time.
-"""
+# ╔═╡ 8002713c-d75c-4623-99c3-a927e2e7485a
+md" **beer**: how many mosquitos each of the beer drinking people attract."
 
-# ╔═╡ 26f3756f-41d9-4ecd-8448-89b9262d713d
-md"### Model: Parameters and functions"
+# ╔═╡ ddcff281-8e2b-4cca-bd4f-7f6a444bfb07
+#beer -> how many mosquitos each of the beer drinking people attract.
+beer = [
+    27,
+    20,
+    21,
+    26,
+    27,
+    31,
+    24,
+    21,
+    20,
+    19,
+    23,
+    24,
+    28,
+    19,
+    24,
+    29,
+    18,
+    20,
+    17,
+    31,
+    20,
+    25,
+    28,
+    21,
+    27,
+]
 
-# ╔═╡ 4350e646-7f05-4c55-b85f-082765891a45
-begin 
-	""" 
-		using Random;
-	"""
-	
-	p = 0.66 # birth probability
-	q = 1 - p # death probability
-	iterations = 100000 # num of iter -death/birth events
-	fc = (1 - p) / p # ciritical fitness value
 
-	# initial fitness list -empty array
-	fitness_list = [] 
+# ╔═╡ afff4a8b-4622-4e93-983b-d836093ec134
+md"**water**: how many mosquitos each water drinker attracts"
 
-	function add_species!(fitness_list) #!
-		"""
-			adding new species w/ random fitness
-		"""
-		push!(fitness_list, rand())
-	end
+# ╔═╡ e29aaf5d-1f51-4d32-be87-60ac33fc0765
+water = [21, 22, 15, 12, 21, 16, 19, 15, 22, 24, 19, 23, 13, 22, 20, 24, 18, 20];
 
-	function remove_species!(fitness_list) 
-		"""
-			remove the species w/ the lowest fitness
-		"""
-		deleteat!(fitness_list, argmin(fitness_list))
-	end
-end
+# ╔═╡ 3e621978-3eb5-46a9-9d98-cf4f3da750a1
+md"One dude shows up and says that beer drinkers attract more mosquitos! So we want to test this using Monte Carlo method."
 
-# ╔═╡ b03f6f0c-ea5d-402d-8365-96b04f31f110
-md"### Model: Iterations"
+# ╔═╡ f6de2271-f1c4-40b5-a0c2-f83fb57f9952
+md"First, let's simply see the mean difference between two goroups."
 
-# ╔═╡ a651e329-4430-4472-8928-3d776b5aa6f3
-begin
-	for _ in 1:iterations
-		if rand() < p
-			add_species!(fitness_list) # birth
-		elseif !isempty(fitness_list)
-			remove_species!(fitness_list)
-		end
-	end
+# ╔═╡ c4ce95a1-413d-4319-82a7-9aa5460d695d
+observed_diff = mean(beer) - mean(water)
+
+# ╔═╡ 68422b97-81db-4269-8a50-980b50906116
+md"OK. This means that beer drinkers attracted $observed_diff more, on average." 
+
+# ╔═╡ aa4d2a4e-a351-44b7-afc3-5b87df84ef29
+md"This difference indeed can arise as random process. We will now test this shit."
+
+# ╔═╡ 9fbbd67a-2380-46c1-9ac7-8b60d08ccfe3
+md"If this difference arise due to random chance. **This means that all data points are equivalent. So we will then combine each data and shuffle it -as there is no difference between the groups**."
+
+# ╔═╡ 3a76646f-fbd3-4074-bf33-94cbb203d8a7
+[beer; water]
+
+# ╔═╡ 0b3af200-ae1e-4b7c-b1b9-c2609379bf7f
+function get_shuffled_diff(y1, y2)
+
+	#. combine the data into one vector
+	y_all = [y1; y2]
+	y_shuffled = shuffle(y_all)
+
+	#. create two groups again 
+	N1 = length(y1) #original lenght of the first vector
+
+	ynew1 = y_shuffled[1:N1]
+	ynew2 = y_shuffled[(N1+1):end]
+
+	#. get the difference between the new groups
+
+	difference = mean(ynew1) - mean(ynew2)
+
+	return difference
 end	
 
-# ╔═╡ 758f2967-19c2-4855-80c4-7a979a1329a5
-fitness_list
+# ╔═╡ 8958a8d3-18e4-43d3-9a38-2bb7c4361ddb
+get_shuffled_diff(beer, water)
 
-# ╔═╡ 9f4b8674-45d5-4837-987c-aa32227dfe00
-md"### Visualization"
+# ╔═╡ f3822d89-5614-40d1-b6da-e99b596c8c8a
+# simulate a bunch differences
+simulated_diffs = [get_shuffled_diff(beer, water) for _ in 1:5000]
 
-# ╔═╡ fb1da4af-0f25-4fcd-bd48-e5f4c6805ee4
+# ╔═╡ 92d93942-aaef-4a4e-abe8-e73b97b161b0
+
+
+# ╔═╡ 3d525c17-62a7-4434-b60d-006d91d57749
 begin
 	f = Figure()
-	ax = Axis(f[1, 1], xminorticksvisible = true, xlabel = "fitness", ylabel = "abundance", title = "Birth prob: $p. Number of iterations: $iterations")
+	ax = Axis(f[1, 1], xlabel = "Difference", ylabel = "Proportion of samples", xminorticksvisible = true)
 
-	fit = hist!(ax, fitness_list; strokewidth = 1)
-	vl = vlines!(ax, fc, color = :orange, linewidth = 3)
+	h = hist!(ax, simulated_diffs;  bins=-6:0.5:6, normalization = :pdf, strokewidth = 1)
 
-	xlims!(ax, 0, 1)
-	axislegend(ax, [vl], ["ciritical fitness"], position = :lt)
+	vl = vlines!(ax, [observed_diff]; color = :orange, label = "Observed difference", linewidth = 2)
+	#Legend(f[1, 1], 
+		#[h, vl],
+		#["if sceptic is right", "observed difference"]
+	#)
+	#axislegend()
+	axislegend(ax, [h, vl],["if sceptic is right", "observed difference"], position = :lt)
+	#axislegend(ax, merge = merge, unique = unique)
 	f
 end
 
@@ -107,10 +151,12 @@ PLUTO_PROJECT_TOML_CONTENTS = """
 CairoMakie = "13f3f980-e62b-5c42-98c6-ff1f3baf88f0"
 PlutoUI = "7f904dfe-b85e-4ff6-b463-dae2292396a8"
 Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
+StatsBase = "2913bbd2-ae8a-5f71-8c99-4fb6c76f3a91"
 
 [compat]
 CairoMakie = "~0.12.5"
 PlutoUI = "~0.7.59"
+StatsBase = "~0.34.3"
 """
 
 # ╔═╡ 00000000-0000-0000-0000-000000000002
@@ -119,7 +165,7 @@ PLUTO_MANIFEST_TOML_CONTENTS = """
 
 julia_version = "1.10.1"
 manifest_format = "2.0"
-project_hash = "5f2aee8bae586dcf07366c563f8321b18f5d92f9"
+project_hash = "d19f5334ce16af754d4cbbb2ffd8d9029acbf5dc"
 
 [[deps.AbstractFFTs]]
 deps = ["LinearAlgebra"]
@@ -1557,18 +1603,27 @@ version = "3.5.0+0"
 """
 
 # ╔═╡ Cell order:
-# ╟─e7a6836e-558e-11ef-0bde-3994fad19914
-# ╟─80cc6369-0566-4181-8ed8-805034e37875
-# ╟─b5f63565-7c87-4746-ae95-e86ccad0b91d
-# ╟─659b9987-8193-4ad3-9d25-99ee3160e341
-# ╟─ea6ed152-888f-4a55-85ea-4bf82bfa6f7c
-# ╟─e7f7c5a6-310f-4e74-aa87-297192e7fb3e
-# ╟─26f3756f-41d9-4ecd-8448-89b9262d713d
-# ╠═4350e646-7f05-4c55-b85f-082765891a45
-# ╟─b03f6f0c-ea5d-402d-8365-96b04f31f110
-# ╠═a651e329-4430-4472-8928-3d776b5aa6f3
-# ╟─758f2967-19c2-4855-80c4-7a979a1329a5
-# ╟─9f4b8674-45d5-4837-987c-aa32227dfe00
-# ╟─fb1da4af-0f25-4fcd-bd48-e5f4c6805ee4
+# ╠═faec6f08-5271-11ef-0d1e-25a50a2fc243
+# ╠═1ac4791a-5759-458b-a39c-1fe34c3a9712
+# ╠═e5c9d12f-cd65-4dfc-8552-cead6a219b21
+# ╠═de681d08-ab29-463d-9a56-03b940191a8b
+# ╠═c18390b5-a97b-4e65-a069-31bbcac715b8
+# ╟─fcf48216-966d-435d-9891-93ba46da13bd
+# ╟─8002713c-d75c-4623-99c3-a927e2e7485a
+# ╟─ddcff281-8e2b-4cca-bd4f-7f6a444bfb07
+# ╟─afff4a8b-4622-4e93-983b-d836093ec134
+# ╠═e29aaf5d-1f51-4d32-be87-60ac33fc0765
+# ╟─3e621978-3eb5-46a9-9d98-cf4f3da750a1
+# ╠═f6de2271-f1c4-40b5-a0c2-f83fb57f9952
+# ╠═c4ce95a1-413d-4319-82a7-9aa5460d695d
+# ╟─68422b97-81db-4269-8a50-980b50906116
+# ╟─aa4d2a4e-a351-44b7-afc3-5b87df84ef29
+# ╟─9fbbd67a-2380-46c1-9ac7-8b60d08ccfe3
+# ╠═3a76646f-fbd3-4074-bf33-94cbb203d8a7
+# ╠═0b3af200-ae1e-4b7c-b1b9-c2609379bf7f
+# ╠═8958a8d3-18e4-43d3-9a38-2bb7c4361ddb
+# ╠═f3822d89-5614-40d1-b6da-e99b596c8c8a
+# ╠═92d93942-aaef-4a4e-abe8-e73b97b161b0
+# ╠═3d525c17-62a7-4434-b60d-006d91d57749
 # ╟─00000000-0000-0000-0000-000000000001
 # ╟─00000000-0000-0000-0000-000000000002
